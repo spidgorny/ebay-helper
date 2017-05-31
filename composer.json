@@ -1,0 +1,5 @@
+{
+    "require": {
+        "dts/ebay-sdk-php": "^12.0"
+    }
+}
