@@ -45,7 +45,8 @@ use \DTS\eBaySDK\Finding\Enums;
 /**
  * Create the service object.
  */
-$credentials = $config['sandbox']['credentials'];
+//$credentials = $config['sandbox']['credentials'];
+$credentials = $config['production']['credentials'];
 //print_r($credentials);
 $credentialsProvider = new Credentials(
 	$credentials[CredentialsProvider::ENV_APP_ID],
@@ -60,7 +61,7 @@ $service = new Services\FindingService([
 	'credentials' => $credentialsProviderFunc,
 	'globalId'    => Constants\GlobalIds::DE,
 	'debug' => false,
-	'sandbox' => true,
+//	'sandbox' => true,
 	'http_errors' => true,
 ]);
 //print_r($service->getConfig('credentials'));
@@ -68,18 +69,41 @@ $service = new Services\FindingService([
 /**
  * Create the request object.
  */
-$request = new Types\FindItemsByKeywordsRequest();
+$request = new Types\FindItemsAdvancedRequest();
 
 /**
  * Assign the keywords.
  */
 $request->keywords = 'Z3';
 
+$request->categoryId = ['9355'];
+
+$itemFilter = new Types\ItemFilter();
+$itemFilter->name = 'ListingType';
+$itemFilter->value[] = 'Auction';
+$itemFilter->value[] = 'AuctionWithBIN';
+$request->itemFilter[] = $itemFilter;
+
+/**
+ * Add additional filters to only include items that fall in the price range of $1 to $10.
+ *
+ * Notice that we can take advantage of the fact that the SDK allows object properties to be assigned via the class constructor.
+ */
+$request->itemFilter[] = new Types\ItemFilter([
+	'name' => 'MinPrice',
+	'value' => ['80.00']
+]);
+
+$request->itemFilter[] = new Types\ItemFilter([
+	'name' => 'MaxPrice',
+	'value' => ['130.00']
+]);
+
 /**
  * Send the request.
  */
 try {
-	$response = $service->findItemsByKeywords($request);
+	$response = $service->findItemsAdvanced($request);
 
 	/**
 	 * Output the result of the search.
@@ -95,6 +119,7 @@ try {
 	}
 
 	if ($response->ack !== 'Failure') {
+		echo 'Size:', $response->searchResult->count, PHP_EOL;
 		foreach ($response->searchResult->item as $item) {
 			printf(
 				"(%s) %s: %.2f\t%s\n",
