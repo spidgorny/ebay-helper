@@ -2,7 +2,8 @@
     "require": {
         "dts/ebay-sdk-php": "^12.0",
         "bocharsky-bw/arrayzy": "^0.6.1",
-        "phpFastCache/phpFastCache": "^6.0"
+        "phpFastCache/phpFastCache": "^6.0",
+        "miloske85/php-cli-table": "^0.2.0"
     },
 	"autoload": {
 		"psr-4": {

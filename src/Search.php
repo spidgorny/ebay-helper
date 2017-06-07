@@ -9,6 +9,7 @@ use \DTS\eBaySDK\Finding\Enums;
 use DTS\eBaySDK\Finding\Types\SearchItem;
 use DTS\eBaySDK\Product\Types\SortOrder;
 use GuzzleHttp\Exception\ServerException;
+use Miloske85\php_cli_table\Table;
 use phpFastCache\Helper\Psr16Adapter;
 use Psr\SimpleCache\CacheInterface;
 
@@ -29,9 +30,28 @@ class Search {
 	 */
 	protected $cacheKey;
 
-	protected $keywords = 'Z3';
+	public $keywords = '(Z3,Z3+,Z4)';
 
-	protected $categoryId = ['9355'];
+	public $categoryId = ['9355'];
+
+	/**
+	 * @var string
+	 */
+	public $minPrice = '80.00';
+
+	/**
+	 * @var string|null
+	 */
+	public $maxPrice = NULL;
+
+	public $bucketWords = [
+		'compact' => ['compact', 'Compact', 'COMPACT', 'D5803', 'd5803'],
+		'Z4' => ['Z3+', 'Z4', 'E6553'],
+		'Z3' => ['Z3', 'z3', 'd6603', 'D6603'],
+		'rest' => ['thisisspecialstringwhichwillneverhappen'],
+	];
+
+	public $condition = [];
 
 	function __construct(FindingService $service, CacheInterface $cache)
 	{
@@ -52,12 +72,12 @@ class Search {
 		$request = $this->makeRequest();
 		$items = $this->search($request);
 		$buckets = $this->sortIntoBuckets(iterator_to_array($items->item));
-		$this->listBucketsCompact($buckets);
+		$this->listBucketsCompact($buckets, $soldBuckets);
 
-		echo 'Sold:', PHP_EOL;
-		$this->dumpBuckets($soldBuckets);
+//		echo 'Sold:', PHP_EOL;
+//		$this->dumpBuckets($soldBuckets);
 		echo 'Ending:', PHP_EOL;
-		$this->dumpBuckets($buckets);
+		$this->dumpBucketsWithDiff($buckets, $soldBuckets);
 	}
 
 	/**
@@ -71,8 +91,34 @@ class Search {
 		}
 	}
 
+	/**
+	 * @param Bucket[] $buckets
+	 */
+	function dumpBucketsWithDiff(array $buckets, array $soldBuckets) {
+		/**
+		 * @var string $name
+		 * @var Bucket $list
+		 */
+		foreach ($buckets as $name => $list) {
+			echo $name, ' (', sizeof($list), ')', PHP_EOL,
+			str_repeat('=', strlen($name)), PHP_EOL;
+			$table = $list->getList();
+			/** @var Bucket $soldInfo */
+			$soldInfo = $soldBuckets[$name];
+			foreach ($table as &$row) {
+				$diff = $row['price'] - $soldInfo->medianPrice();
+				$row['diff'] = $diff;
+				$row['diff%'] = number_format($row['price'] * 100 / $soldInfo->medianPrice(), 2);
+			}
+
+			if ($table) {
+				$table = new Table($table);
+				echo $table->getTable();
+			}
+		}
+	}
+
 	function listBuckets(array $buckets) {
-		echo PHP_EOL;
 		/**
 		 * @var string $name
 		 * @var Bucket $list
@@ -86,15 +132,28 @@ class Search {
 		}
 	}
 
-	function listBucketsCompact(array $buckets) {
-		echo PHP_EOL;
+	function listBucketsCompact(array $buckets, array $soldBuckets = NULL) {
+		$table = [];
 		/**
 		 * @var string $name
 		 * @var Bucket $list
 		 */
 		foreach ($buckets as $name => $list) {
-			echo $name, TAB, sizeof($list), TAB, $list->medianPrice(), PHP_EOL;
+//			echo $name, TAB, sizeof($list), TAB, $list->medianPrice(), PHP_EOL;
+			$row = [
+				'name'  => $name,
+				'count' => sizeof($list),
+				'price' => $list->medianPrice(),
+			];
+			if ($soldBuckets) {
+				$soldInfo = $soldBuckets[$name];
+				$diff = $list->medianPrice() - $soldInfo->medianPrice();
+				$row['diff'] = ($diff > 0 ? '+' : '') . $diff;
+			}
+			$table[] = $row;
 		}
+		$table = new Table($table);
+		echo $table->getTable();
 	}
 
 	/**
@@ -106,24 +165,16 @@ class Search {
 		 * @var $buckets Bucket[]
 		 */
 		$buckets = [];
-		$buckets['Z3Compact'] = new Bucket();
-		$buckets['Z4'] = new Bucket();
-		$buckets['Z3'] = new Bucket();
-		$buckets['rest'] = new Bucket();
+		foreach ($this->bucketWords as $name => $words) {
+			$buckets[$name] = new Bucket();
+		}
 		foreach ($items as $item) {
 			$tokens = str_word_count($item->title, 1, '0123456789+');
-			$terms = ArrayImitator::create($tokens);
+			/** @var Bucket $terms */
+			$terms = Bucket::create($tokens);
 			//echo $terms->toString(), PHP_EOL;
-			$compact = ['compact', 'Compact', 'COMPACT', 'D5803', 'd5803'];
-			if ($terms->intersect($compact)->count()) {
-				$buckets['Z3Compact']->add($item);
-			} elseif ($terms->intersect(['Z3+', 'Z4', 'E6553'])->count()) {
-				$buckets['Z4']->add($item);
-			} elseif ($terms->intersect(['Z3', 'z3', 'd6603', 'D6603'])->count()) {
-				$buckets['Z3']->add($item);
-			} else {
-				$buckets['rest']->add($item);
-			}
+			$bucketName = $terms->findBucket($this->bucketWords);
+			$buckets[$bucketName]->add($item);
 		}
 		return $buckets;
 	}
@@ -193,14 +244,23 @@ class Search {
 		 */
 		$request->itemFilter[] = new Types\ItemFilter([
 			'name'  => 'MinPrice',
-			'value' => ['80.00'],
+			'value' => [$this->minPrice],
 		]);
 
-/*		$request->itemFilter[] = new Types\ItemFilter([
-			'name'  => 'MaxPrice',
-			'value' => ['150.00'],
-		]);
-*/
+		if ($this->maxPrice) {
+			$request->itemFilter[] = new Types\ItemFilter([
+				'name'  => 'MaxPrice',
+				'value' => [$this->maxPrice],
+			]);
+		}
+
+		if ($this->condition) {
+			$request->itemFilter[] = new Types\ItemFilter([
+				'name'  => 'Condition',
+				'value' => $this->condition,
+			]);
+		}
+
 		$request->sortOrder = 'EndTimeSoonest';
 
 		/**

@@ -38,6 +38,32 @@ class Bucket extends ArrayImitator
 		}
 	}
 
+	public function getList()
+	{
+		$table = [];
+		foreach ($this->elements as $key => $item) {
+			$remaining = $item->sellingStatus->timeLeft;
+			try {
+				$remaining = new \DateInterval($remaining);
+				$remaining = $remaining->format('%R%Dd %Hh');
+			} catch (\Exception $e) {
+				// remaining remain a string
+			}
+			$row = [
+				'itemId' => $item->itemId,
+				'currencyId' => $item->sellingStatus->currentPrice->currencyId,
+				'price' => $item->sellingStatus->currentPrice->value,
+				'diff' => '',
+				'diff%' => '',
+				'bids' => $item->sellingStatus->bidCount,
+				'remaining' => $remaining,
+				'title' => $item->title,
+			];
+			$table[] = $row;
+		}
+		return $table;
+	}
+
 	function median()
 	{
 		if ($this->elements) {
@@ -57,6 +83,16 @@ class Bucket extends ArrayImitator
 		});
 		$priceBucket = new Bucket($prices->elements);
 		return $priceBucket->median();
+	}
+
+	public function findBucket(array $bucketWords, $restName = 'rest')
+	{
+		foreach ($bucketWords as $bucket => $wordList) {
+			if ($this->intersect($wordList)->count()) {
+				return $bucket;
+			}
+		}
+		return $restName;
 	}
 
 }

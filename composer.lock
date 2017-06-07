@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#composer-lock-the-lock-file",
         "This file is @generated automatically"
     ],
-    "content-hash": "f7a01800dfaca4cbba93d2801f47f9e8",
+    "content-hash": "fccc70098ac8032a08dd152bdc283b4f",
     "packages": [
         {
             "name": "bocharsky-bw/arrayzy",
@@ -286,6 +286,44 @@
                 "url"
             ],
             "time": "2017-03-20T17:10:46+00:00"
+        },
+        {
+            "name": "miloske85/php-cli-table",
+            "version": "v0.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/miloske85/php-cli-table.git",
+                "reference": "77f1801ca5c561f07e9e4b2af2a56ec800ab9921"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/miloske85/php-cli-table/zipball/77f1801ca5c561f07e9e4b2af2a56ec800ab9921",
+                "reference": "77f1801ca5c561f07e9e4b2af2a56ec800ab9921",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=5.3.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Miloske85\\php_cli_table\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "GPL3"
+            ],
+            "authors": [
+                {
+                    "name": "Milos Milutinovic",
+                    "email": "milos.milutinovic@live.com",
+                    "homepage": "http://miloske.tk"
+                }
+            ],
+            "description": "Makes tables in CLI output",
+            "homepage": "https://github.com/miloske85/php-cli-table",
+            "time": "2017-05-29T17:01:18+00:00"
         },
         {
             "name": "phpfastcache/phpfastcache",
