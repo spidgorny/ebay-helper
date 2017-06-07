@@ -1,3 +1,6 @@
+# ebay-helper
+Analyze past prices for the item you wish to purchase
+
 # Idea
 
 The idea of this project is to get more insights on the *price* of the ebay listing you are about to purchase.
