@@ -29,6 +29,10 @@ class Search {
 	 */
 	protected $cacheKey;
 
+	protected $keywords = 'Z3';
+
+	protected $categoryId = ['9355'];
+
 	function __construct(FindingService $service, CacheInterface $cache)
 	{
 		$this->service = $service;
@@ -38,45 +42,58 @@ class Search {
 
 	function render()
 	{
+		echo 'Sold:', PHP_EOL;
+		$request = $this->makeRequestSold();
+		$sold = $this->search($request);
+		$soldBuckets = $this->sortIntoBuckets(iterator_to_array($sold->item));
+		$this->listBucketsCompact($soldBuckets);
+
+		echo 'Ending:', PHP_EOL;
 		$request = $this->makeRequest();
-//		if (!$this->cache->has($this->cacheKey)) {
-			$items = $this->search($request);
-//			$this->cache->set($this->cacheKey, $items);
-//		} else {
-//			$items = $this->cache->get($this->cacheKey);
-//		}
+		$items = $this->search($request);
+		$buckets = $this->sortIntoBuckets(iterator_to_array($items->item));
+		$this->listBucketsCompact($buckets);
 
-		if ($items) {
-			echo 'Size: ', $items->count, PHP_EOL;
-			echo '(array): ', count((array)$items->item), PHP_EOL;
-			echo 'Item: ', count($items->item), PHP_EOL;
-			$page = [];
-			foreach ($items->item as $item) {
-				$page[] = $item;
-			}
-			echo 'Page: ', count($page), PHP_EOL;
+		echo 'Sold:', PHP_EOL;
+		$this->dumpBuckets($soldBuckets);
+		echo 'Ending:', PHP_EOL;
+		$this->dumpBuckets($buckets);
+	}
 
-			$b = new Bucket($page);
-			echo 'Bucket: ', $b->count(), PHP_EOL;
-			//$b->list();
-			//print_r($item);
+	/**
+	 * @param Bucket[] $buckets
+	 */
+	function dumpBuckets(array $buckets) {
+		foreach ($buckets as $name => $list) {
+			echo $name, ' (', sizeof($list), ')', PHP_EOL,
+			str_repeat('=', strlen($name)), PHP_EOL;
+			$list->list();
+		}
+	}
 
-			$buckets = $this->sortIntoBuckets($page);
-			/**
-			 * @var string $name
-			 * @var Bucket $list
-			 */
-			foreach ($buckets as $name => $list) {
-				echo $name, PHP_EOL, str_repeat('=', strlen($name)), PHP_EOL;
-				echo 'Length: ', sizeof($list), PHP_EOL;
-				echo 'Median: ', $list->medianPrice(), PHP_EOL;
+	function listBuckets(array $buckets) {
+		echo PHP_EOL;
+		/**
+		 * @var string $name
+		 * @var Bucket $list
+		 */
+		foreach ($buckets as $name => $list) {
+			echo $name, PHP_EOL, str_repeat('=', strlen($name)), PHP_EOL;
+			echo 'Length: ', sizeof($list), PHP_EOL;
+			echo 'Median: ', $list->medianPrice(), PHP_EOL;
 
-				if ($name == 'rest') {
-					$list->list();
-				}
+			echo PHP_EOL;
+		}
+	}
 
-				echo PHP_EOL;
-			}
+	function listBucketsCompact(array $buckets) {
+		echo PHP_EOL;
+		/**
+		 * @var string $name
+		 * @var Bucket $list
+		 */
+		foreach ($buckets as $name => $list) {
+			echo $name, TAB, sizeof($list), TAB, $list->medianPrice(), PHP_EOL;
 		}
 	}
 
@@ -111,12 +128,16 @@ class Search {
 		return $buckets;
 	}
 
-	function search(Types\FindItemsAdvancedRequest $request) {
+	function search($request) {
 		/**
 		 * Send the request.
 		 */
 		try {
-			$response = $this->service->findItemsAdvanced($request);
+			if ($request instanceof Types\FindCompletedItemsRequest) {
+				$response = $this->service->findCompletedItems($request);
+			} else {
+				$response = $this->service->findItemsAdvanced($request);
+			}
 
 			/**
 			 * Output the result of the search.
@@ -155,9 +176,9 @@ class Search {
 		/**
 		 * Assign the keywords.
 		 */
-		$request->keywords = 'Z3';
+		$request->keywords = $this->keywords;
 
-		$request->categoryId = ['9355'];
+		$request->categoryId = $this->categoryId;
 
 		$itemFilter = new Types\ItemFilter();
 		$itemFilter->name = 'ListingType';
@@ -175,9 +196,49 @@ class Search {
 			'value' => ['80.00'],
 		]);
 
-		$request->itemFilter[] = new Types\ItemFilter([
+/*		$request->itemFilter[] = new Types\ItemFilter([
 			'name'  => 'MaxPrice',
-			'value' => ['130.00'],
+			'value' => ['150.00'],
+		]);
+*/
+		$request->sortOrder = 'EndTimeSoonest';
+
+		/**
+		 * Limit the results to 10 items per page and start at page 1.
+		 */
+		$request->paginationInput = new Types\PaginationInput();
+		$request->paginationInput->entriesPerPage = 50;
+		$request->paginationInput->pageNumber = 1;
+
+		return $request;
+	}
+
+	/**
+	 * @return Types\FindCompletedItemsRequest
+	 */
+	private function makeRequestSold(): Types\FindCompletedItemsRequest
+	{
+		/**
+		 * Create the request object.
+		 */
+		$request = new Types\FindCompletedItemsRequest();
+
+		/**
+		 * Assign the keywords.
+		 */
+		$request->keywords = $this->keywords;
+
+		$request->categoryId = $this->categoryId;
+
+		$itemFilter = new Types\ItemFilter();
+		$itemFilter->name = 'ListingType';
+		$itemFilter->value[] = 'Auction';
+		$itemFilter->value[] = 'AuctionWithBIN';
+		$request->itemFilter[] = $itemFilter;
+
+		$request->itemFilter[] = new Types\ItemFilter([
+			'name'  => 'SoldItemsOnly',
+			'value' => ['true'],
 		]);
 
 		$request->sortOrder = 'EndTimeSoonest';
@@ -186,7 +247,7 @@ class Search {
 		 * Limit the results to 10 items per page and start at page 1.
 		 */
 		$request->paginationInput = new Types\PaginationInput();
-		$request->paginationInput->entriesPerPage = 50;
+		$request->paginationInput->entriesPerPage = 100;
 		$request->paginationInput->pageNumber = 1;
 
 		return $request;

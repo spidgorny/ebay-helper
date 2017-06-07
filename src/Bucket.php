@@ -20,8 +20,12 @@ class Bucket extends ArrayImitator
 		foreach ($this->elements as $key => $item) {
 //			print_r($item);
 			$remaining = $item->sellingStatus->timeLeft;
-			$remaining = new \DateInterval($remaining);
-			$remaining = $remaining->format('%R%Dd %Hh');
+			try {
+				$remaining = new \DateInterval($remaining);
+				$remaining = $remaining->format('%R%Dd %Hh');
+			} catch (\Exception $e) {
+				// remaining remain a string
+			}
 			printf(
 				"(%s) %s: %.2f\t%d bids\t%s\t%s\n",
 				$item->itemId,
