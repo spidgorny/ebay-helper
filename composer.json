@@ -1,5 +1,12 @@
 {
     "require": {
-        "dts/ebay-sdk-php": "^12.0"
-    }
+        "dts/ebay-sdk-php": "^12.0",
+        "bocharsky-bw/arrayzy": "^0.6.1",
+        "phpFastCache/phpFastCache": "^6.0"
+    },
+	"autoload": {
+		"psr-4": {
+			"EbayHelper\\": "src"
+		}
+	}
 }
