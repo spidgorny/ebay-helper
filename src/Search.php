@@ -105,10 +105,14 @@ class Search {
 			$table = $list->getList();
 			/** @var Bucket $soldInfo */
 			$soldInfo = $soldBuckets[$name];
+			$medianPrice = $soldInfo->medianPrice();
 			foreach ($table as &$row) {
-				$diff = $row['price'] - $soldInfo->medianPrice();
+				$row['median'] = $medianPrice;
+				$diff = $row['price'] - $medianPrice;
 				$row['diff'] = $diff;
-				$row['diff%'] = number_format($row['price'] * 100 / $soldInfo->medianPrice(), 2);
+				if ($medianPrice) {
+					$row['diff%'] = number_format($row['price'] * 100 / $medianPrice, 2).'%';
+				}
 			}
 
 			if ($table) {

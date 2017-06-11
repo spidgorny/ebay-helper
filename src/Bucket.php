@@ -52,6 +52,7 @@ class Bucket extends ArrayImitator
 			$row = [
 				'itemId' => $item->itemId,
 				'currencyId' => $item->sellingStatus->currentPrice->currencyId,
+				'median' => '',
 				'price' => $item->sellingStatus->currentPrice->value,
 				'diff' => '',
 				'diff%' => '',

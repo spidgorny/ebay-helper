@@ -13,13 +13,14 @@ $service = $config->getEbayService();
 $cache = $config->getCache();
 $s = new \EbayHelper\Search($service, $cache);
 //$s->keywords = '(Z3,Z3+,Z4)';
-$s->keywords = '(Z3+,Z4)';
+$s->keywords = '(Z3+,Z4,Z5)';
 $s->categoryId = ['9355'];	// Mobile phone without contract
 $s->minPrice = '10.00';
 $s->bucketWords = [
 	'compact' => ['compact', 'Compact', 'COMPACT', 'D5803', 'd5803'],
 	'Z4' => ['Z3+', 'Z4', 'E6553'],
 	'Z3' => ['Z3', 'z3', 'd6603', 'D6603'],
+	'Z5' => ['Z5', 'z5', 'e6653', 'E6653', 'E6683', 'e6683'],
 	'rest' => ['thisisspecialstringwhichwillneverhappen'],
 ];
 
